@@ -1,0 +1,109 @@
+﻿import {
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  Component,
+  OnInit,
+  inject
+} from '@angular/core';
+import { CommonModule } from '@angular/common';
+import {
+  FormBuilder,
+  ReactiveFormsModule,
+  Validators
+} from '@angular/forms';
+
+import { TodoService } from '../../core/services/todo-service';
+import { TodoResponse } from '../../models/todo-response';
+
+@Component({
+  selector: 'app-todo-list',
+  standalone: true,
+  imports: [
+    CommonModule,
+    ReactiveFormsModule
+  ],
+  templateUrl: './todo-list.html',
+  styleUrl: './todo-list.css',
+  changeDetection: ChangeDetectionStrategy.OnPush
+})
+export class TodoListComponent implements OnInit {
+
+  private readonly todoService = inject(TodoService);
+
+  private readonly fb = inject(FormBuilder);
+
+  private readonly cdRef = inject(ChangeDetectorRef);
+
+  todos: TodoResponse[] = [];
+
+  form = this.fb.nonNullable.group({
+    title: ['', Validators.required]
+  });
+
+  ngOnInit(): void {
+
+    this.loadTodos();
+
+  }
+
+loadTodos(): void {
+
+    this.todoService.getAll().subscribe({
+
+        next: (response) => {
+
+            console.log('Reload Response:', response);
+
+            this.todos = [...(response.data ?? [])];
+
+        },
+
+        error: (error) => {
+
+            console.error(error);
+
+        }
+
+    });
+
+}
+
+addTodo(): void {
+
+    if (this.form.invalid) {
+        return;
+    }
+
+    this.todoService.create(this.form.getRawValue())
+        .subscribe({
+            next: (response) => {
+
+                console.log('Create Response:', response);
+
+                this.loadTodos();
+
+                this.form.reset({
+                    title: ''
+                });
+
+            },
+            error: (error) => {
+                console.error(error);
+            }
+        });
+
+}
+
+  deleteTodo(id: string): void {
+
+    this.todoService.delete(id)
+
+      .subscribe({
+
+        next: () => this.loadTodos()
+
+      });
+
+  }
+
+}
